@@ -66,6 +66,8 @@ class Arch_Panel:
         import Draft
         import draftguitools.gui_trackers as DraftTrackers
         from draftutils import params
+
+        self.doc = FreeCAD.ActiveDocument
         self.Length = params.get_param_arch("PanelLength")
         self.Width = params.get_param_arch("PanelWidth")
         self.Thickness = params.get_param_arch("PanelThickness")
@@ -77,26 +79,26 @@ class Arch_Panel:
             if len(sel) == 1:
                 if Draft.getType(sel[0]) == "Panel":
                     return
-            FreeCAD.ActiveDocument.openTransaction(str(translate("Arch","Create Panel")))
+            self.doc.openTransaction(str(translate("Arch","Create Panel")))
             FreeCADGui.addModule("Arch")
             FreeCADGui.addModule("Draft")
             for obj in sel:
                 FreeCADGui.doCommand("obj = Arch.makePanel(FreeCAD.ActiveDocument." + obj.Name + ",thickness=" + str(self.Thickness) + ")")
                 FreeCADGui.doCommand("Draft.autogroup(obj)")
-            FreeCAD.ActiveDocument.commitTransaction()
-            FreeCAD.ActiveDocument.recompute()
+            self.doc.commitTransaction()
+            self.doc.recompute()
             return
 
         # interactive mode
-        WorkingPlane.get_working_plane()
 
+        FreeCAD.activeDraftCommand = self  # register as a Draft command for auto grid on/off
+        WorkingPlane.get_working_plane()
         self.points = []
         self.tracker = DraftTrackers.boxTracker()
         self.tracker.width(self.Width)
         self.tracker.height(self.Thickness)
         self.tracker.length(self.Length)
         self.tracker.on()
-        FreeCAD.activeDraftCommand = self
         FreeCADGui.Snapper.getPoint(callback=self.getPoint,movecallback=self.update,extradlg=self.taskbox())
         FreeCADGui.draftToolBar.continueCmd.show()
 
@@ -105,11 +107,13 @@ class Arch_Panel:
         "this function is called by the snapper when it has a 3D point"
 
         import DraftVecUtils
+
+        FreeCAD.activeDraftCommand = None
+        FreeCADGui.Snapper.off()
         self.tracker.finalize()
         if point is None:
-            FreeCAD.activeDraftCommand = None
             return
-        FreeCAD.ActiveDocument.openTransaction(translate("Arch","Create Panel"))
+        self.doc.openTransaction(translate("Arch","Create Panel"))
         FreeCADGui.addModule("Arch")
         if self.Profile:
             pr = Presets[self.Profile]
@@ -121,9 +125,8 @@ class Arch_Panel:
         FreeCADGui.doCommand('s.Placement.Base = '+DraftVecUtils.toString(point))
         if self.rotated:
             FreeCADGui.doCommand('s.Placement.Rotation = FreeCAD.Rotation(FreeCAD.Vector(1.00,0.00,0.00),90.00)')
-        FreeCAD.ActiveDocument.commitTransaction()
-        FreeCAD.ActiveDocument.recompute()
-        FreeCAD.activeDraftCommand = None
+        self.doc.commitTransaction()
+        self.doc.recompute()
         if FreeCADGui.draftToolBar.continueCmd.isChecked():
             self.Activated()
 

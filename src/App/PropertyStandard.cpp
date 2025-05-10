@@ -277,7 +277,7 @@ unsigned int PropertyPath::getMemSize() const
 // PropertyEnumeration
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-TYPESYSTEM_SOURCE(App::PropertyEnumeration, App::PropertyInteger)
+TYPESYSTEM_SOURCE(App::PropertyEnumeration, App::Property)
 
 //**************************************************************************
 // Construction/Destruction
@@ -442,7 +442,7 @@ void PropertyEnumeration::Restore(Base::XMLReader& reader)
     if (val < 0) {
         // If the enum is empty at this stage do not print a warning
         if (_enum.hasEnums()) {
-            Base::Console().DeveloperWarning(std::string("PropertyEnumeration"),
+            Base::Console().developerWarning(std::string("PropertyEnumeration"),
                                              "Enumeration index %d is out of range, ignore it\n",
                                              val);
         }
@@ -518,7 +518,7 @@ void PropertyEnumeration::setPyObject(PyObject* value)
         }
         catch (Py::Exception&) {
             Base::PyException e;
-            e.ReportException();
+            e.reportException();
         }
     }
 
@@ -1442,7 +1442,7 @@ void PropertyString::setValue(const char* newValue)
 
     std::vector<std::pair<Property*, std::unique_ptr<Property>>> propChanges;
     std::string newValueStr = newValue;
-    auto obj = dynamic_cast<DocumentObject*>(getContainer());
+    auto obj = freecad_cast<DocumentObject*>(getContainer());
     bool commit = false;
 
     if (obj && this == &obj->Label) {
@@ -1510,7 +1510,7 @@ void PropertyString::setPyObject(PyObject* value)
 void PropertyString::Save(Base::Writer& writer) const
 {
     std::string val;
-    auto obj = dynamic_cast<DocumentObject*>(getContainer());
+    auto obj = freecad_cast<DocumentObject*>(getContainer());
     writer.Stream() << writer.ind() << "<String ";
     bool exported = false;
     if (obj && obj->isAttachedToDocument() && obj->isExporting() && &obj->Label == this) {
@@ -1534,7 +1534,7 @@ void PropertyString::Restore(Base::XMLReader& reader)
     // read my Element
     reader.readElement("String");
     // get the value of my Attribute
-    auto obj = dynamic_cast<DocumentObject*>(getContainer());
+    auto obj = freecad_cast<DocumentObject*>(getContainer());
     if (obj && &obj->Label == this) {
         if (reader.hasAttribute("restore")) {
             int restore = reader.getAttributeAsInteger("restore");

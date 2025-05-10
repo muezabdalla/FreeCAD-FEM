@@ -2,6 +2,7 @@ name: Weekly Build
 on:
   schedule:
    - cron: "42 18 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,7 +14,7 @@ jobs:
       build_tag: ${{ steps.tag_build.outputs.build_tag }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
           egress-policy: audit
 
@@ -25,12 +26,16 @@ jobs:
       - name: Tag Build
         id: tag_build
         shell: bash -l {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           export BUILD_TAG=weekly-$(date "+%Y.%m.%d")
           echo "BUILD_TAG=${BUILD_TAG}" >> "$GITHUB_ENV"
           echo "build_tag=${BUILD_TAG}" >> "$GITHUB_OUTPUT"
+          gh release create ${BUILD_TAG} --title "Development Build ${BUILD_TAG}" -F .github/workflows/weekly-build-notes.md --prerelease || true
 
       - name: Upload Source
+        shell: bash -l {0}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -46,7 +51,6 @@ jobs:
              rm \$sha1.tar"
           gzip freecad_source_${BUILD_TAG}.tar
           sha256sum freecad_source_${BUILD_TAG}.tar.gz > freecad_source_${BUILD_TAG}.tar.gz-SHA256.txt
-          gh release create ${BUILD_TAG} --title "Weekly Build ${BUILD_TAG}" --notes "Weekly Build ${BUILD_TAG}" --prerelease || true
           gh release upload --clobber ${BUILD_TAG} "freecad_source_${BUILD_TAG}.tar.gz" "freecad_source_${BUILD_TAG}.tar.gz-SHA256.txt"
 
   build:
@@ -67,14 +71,14 @@ jobs:
       # prevent running out of disk space on Ubuntu runners.
       - name: Maximize build space
         if: runner.os == 'Linux'
-        uses: AdityaGarg8/remove-unwanted-software@v5
+        uses: AdityaGarg8/remove-unwanted-software@90e01b21170618765a73370fcc3abbd1684a7793 # v5
         with:
           verbose: 'true'
           remove-android: 'true'      # (frees ~9 GB)
           remove-cached-tools: 'true' # (frees ~8.3 GB)
 
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
           egress-policy: audit
 
